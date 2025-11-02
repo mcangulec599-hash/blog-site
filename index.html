@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mehmet Cangüleç | Kişisel Blog</title>
+  <link rel="shortcut icon" href="logo.png" type="image/png" />
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: #fafafa; color: #333; }
+
+    header {
+      text-align: center;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    header img { height: 80px; width: auto; }
+    header h1 { font-size: 24px; margin-top: 8px; }
+
+    nav {
+      background-color: #1a1a1a;
+      color: white;
+      text-align: center;
+      padding: 12px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 0 12px;
+      font-weight: bold;
+      transition: color 0.3s;
+      font-size: 16px;
+    }
+
+    nav a:hover { color: #aaa; }
+
+    section {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .about {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .about img {
+      width: 160px;
+      border-radius: 15px;
+      margin-right: 20px;
+    }
+
+    .about p { flex: 1; min-width: 250px; }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      margin-top: 15px;
+    }
+
+    label { margin-top: 10px; font-weight: bold; }
+    input, textarea {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-top: 5px;
+      font-size: 15px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 12px;
+      background-color: #1a1a1a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 17px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover { background-color: #333; }
+
+    article {
+      margin-bottom: 25px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 15px;
+    }
+
+    article h3 { font-size: 18px; margin-bottom: 8px; }
+    article p { font-size: 15px; line-height: 1.5; }
+    small { color: #777; }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      background-color: #1a1a1a;
+      color: white;
+      margin-top: 40px;
+      font-size: 14px;
+    }
+
+    /* 📱 Mobil uyum */
+    @media (max-width: 768px) {
+      header img { height: 60px; }
+      header h1 { font-size: 20px; }
+      nav a { margin: 0 8px; font-size: 15px; }
+      section { margin: 15px; padding: 15px; }
+      input, textarea, button { font-size: 16px; }
+      .about { flex-direction: column; text-align: center; }
+      .about img { margin: 0 auto 15px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="logo.png" alt="MC Logo" />
+    <h1>Mehmet Cangüleç | Kişisel Blog</h1>
+  </header>
+
+  <nav>
+    <a href="#hakkimda">Hakkımda</a>
+    <a href="#yazilar">Yazılar</a>
+    <a href="#yeniYazi">Yazı Ekle</a>
+  </nav>
+
+  <section id="hakkimda">
+    <h2>Hakkımda</h2>
+    <div class="about">
+      <img src="profil.jpg" alt="Profil Fotoğrafı" />
+      <p>Merhaba! Ben Mehmet Cangüleç. Kendi kişisel bloguma hoş geldiniz. Burada hayatım, düşüncelerim, hobilerim ve deneyimlerim hakkında yazılar paylaşıyorum.</p>
+    </div>
+  </section>
+
+  <section id="yazilar">
+    <h2>Yazılar</h2>
+    <div id="yaziListesi"></div>
+  </section>
+
+  <section id="yeniYazi">
+    <h2>Yeni Yazı Ekle</h2>
+    <form id="yaziForm">
+      <label>Yazar Adı:</label>
+      <input type="text" id="yazar" required />
+      <label>Yazı İçeriği:</label>
+      <textarea id="icerik" rows="4" required></textarea>
+      <button type="submit">Yazıyı Yayınla</button>
+    </form>
+  </section>
+
+  <footer>
+    <p>© 2025 Mehmet Cangüleç. Tüm hakları saklıdır.</p>
+  </footer>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBeX_35S6qrW_Xq34idVEOO_fAX9JN-Ya8",
+      authDomain: "mehmet-blog-e6b69.firebaseapp.com",
+      projectId: "mehmet-blog-e6b69",
+      storageBucket: "mehmet-blog-e6b69.firebasestorage.app",
+      messagingSenderId: "257344928109",
+      appId: "1:257344928109:web:0a0fb3e82412429cc0c264"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Yazı ekleme
+    const form = document.getElementById("yaziForm");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const yazar = document.getElementById("yazar").value.trim();
+      const icerik = document.getElementById("icerik").value.trim();
+
+      if (yazar && icerik) {
+        await addDoc(collection(db, "yazilar"), {
+          yazar,
+          icerik,
+          tarih: serverTimestamp()
+        });
+        form.reset();
+        alert("Yazı başarıyla yayınlandı!");
+        location.reload();
+      }
+    });
+
+    // Yazıları getir
+    async function yazilariGetir() {
+      const yaziListesi = document.getElementById("yaziListesi");
+      const q = query(collection(db, "yazilar"), orderBy("tarih", "desc"));
+      const snapshot = await getDocs(q);
+
+      yaziListesi.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const tarih = data.tarih?.toDate
+          ? data.tarih.toDate().toLocaleString("tr-TR")
+          : "Tarih yok";
+        const article = `
+          <article>
+            <h3>${data.yazar}</h3>
+            <p>${data.icerik}</p>
+            <small>Yayın tarihi: ${tarih}</small>
+          </article>`;
+        yaziListesi.innerHTML += article;
+      });
+    }
+
+    yazilariGetir();
+  </script>
+</body>
+</html>
