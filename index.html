@@ -99,8 +99,24 @@
     }
 
     article h3 { font-size: 18px; margin-bottom: 8px; }
-    article p { font-size: 15px; line-height: 1.5; }
-    small { color: #777; }
+    article p { font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
+    small { color: #777; display: block; margin-top: 8px; }
+
+    .admin-area {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 12px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .admin-area input { max-width: 320px; flex: 1; }
+    .admin-area .status { margin-left: auto; color: #555; font-size: 14px; }
 
     footer {
       text-align: center;
@@ -120,6 +136,8 @@
       input, textarea, button { font-size: 16px; }
       .about { flex-direction: column; text-align: center; }
       .about img { margin: 0 auto 15px; }
+      .admin-area { flex-direction: column; align-items: stretch; }
+      .admin-area .status { margin-left: 0; }
     }
   </style>
 </head>
@@ -144,6 +162,15 @@
     </div>
   </section>
 
+  <!-- Admin / Login bölümü (üstte görünecek) -->
+  <div class="admin-area" id="adminArea">
+    <input type="email" id="adminEmail" placeholder="E-posta (admin)" value="mcangulec599@gmail.com" />
+    <input type="password" id="adminPassword" placeholder="Şifre (gizli)" />
+    <button id="loginBtn">Giriş Yap</button>
+    <button id="logoutBtn" style="display:none;">Çıkış Yap</button>
+    <div class="status" id="adminStatus">Ziyaretçi</div>
+  </div>
+
   <section id="yazilar">
     <h2>Yazılar</h2>
     <div id="yaziListesi"></div>
@@ -164,11 +191,18 @@
     <p>© 2025 Mehmet Cangüleç. Tüm hakları saklıdır.</p>
   </footer>
 
-  <!-- Firebase -->
+  <!-- Firebase ve uygulama kodu -->
   <script type="module">
+    // Firebase SDK modülleri
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import {
+      getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import {
+      getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
+    // ---------- Firebase config (senin proje bilgilerin) ----------
     const firebaseConfig = {
       apiKey: "AIzaSyBeX_35S6qrW_Xq34idVEOO_fAX9JN-Ya8",
       authDomain: "mehmet-blog-e6b69.firebaseapp.com",
@@ -180,15 +214,49 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    // Yazı ekleme
+    // DOM elemanları
+    const yaziListesi = document.getElementById("yaziListesi");
     const form = document.getElementById("yaziForm");
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const adminEmailInput = document.getElementById("adminEmail");
+    const adminPasswordInput = document.getElementById("adminPassword");
+    const adminStatus = document.getElementById("adminStatus");
+
+    // ---------- Giriş / Çıkış işlemleri ----------
+    loginBtn.addEventListener("click", async () => {
+      const email = adminEmailInput.value.trim();
+      const password = adminPasswordInput.value;
+      if (!email || !password) {
+        alert("Email ve şifre gir.");
+        return;
+      }
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged callback çalışacak ve UI güncellenecek
+      } catch (err) {
+        alert("Giriş başarısız: " + (err.message || err));
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      alert("Çıkış yapıldı.");
+    });
+
+    // ---------- Yazı ekleme ----------
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const yazar = document.getElementById("yazar").value.trim();
       const icerik = document.getElementById("icerik").value.trim();
-
-      if (yazar && icerik) {
+      if (!yazar || !icerik) {
+        alert("Yazar ve içerik gerekli.");
+        return;
+      }
+      try {
         await addDoc(collection(db, "yazilar"), {
           yazar,
           icerik,
@@ -196,33 +264,96 @@
         });
         form.reset();
         alert("Yazı başarıyla yayınlandı!");
-        location.reload();
+        // yenilemek yerine tekrar çek
+        const user = auth.currentUser;
+        await yazilariGetir(user);
+      } catch (err) {
+        alert("Yazı eklenirken hata: " + (err.message || err));
       }
     });
 
-    // Yazıları getir
-    async function yazilariGetir() {
-      const yaziListesi = document.getElementById("yaziListesi");
-      const q = query(collection(db, "yazilar"), orderBy("tarih", "desc"));
-      const snapshot = await getDocs(q);
+    // ---------- Yazıları getir ve DOM'a ekle ----------
+    async function yazilariGetir(user) {
+      yaziListesi.innerHTML = "Yükleniyor...";
+      try {
+        const q = query(collection(db, "yazilar"), orderBy("tarih", "desc"));
+        const snapshot = await getDocs(q);
+        yaziListesi.innerHTML = "";
+        if (snapshot.empty) {
+          yaziListesi.innerHTML = "<p>Henüz yazı yok.</p>";
+          return;
+        }
 
-      yaziListesi.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const tarih = data.tarih?.toDate
-          ? data.tarih.toDate().toLocaleString("tr-TR")
-          : "Tarih yok";
-        const article = `
-          <article>
-            <h3>${data.yazar}</h3>
-            <p>${data.icerik}</p>
-            <small>Yayın tarihi: ${tarih}</small>
-          </article>`;
-        yaziListesi.innerHTML += article;
-      });
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const id = docSnap.id;
+          const tarih = data.tarih?.toDate
+            ? data.tarih.toDate().toLocaleString("tr-TR")
+            : "Tarih yok";
+
+          const article = document.createElement("article");
+
+          const h3 = document.createElement("h3");
+          h3.textContent = data.yazar || "Anonim";
+          article.appendChild(h3);
+
+          const p = document.createElement("p");
+          p.textContent = data.icerik || "";
+          article.appendChild(p);
+
+          const small = document.createElement("small");
+          small.textContent = "Yayın tarihi: " + tarih;
+          article.appendChild(small);
+
+          // Sadece admin (sen) için silme butonu göster
+          if (user && user.email === "mcangulec599@gmail.com") {
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "🗑️ Sil";
+            delBtn.style.marginTop = "8px";
+            delBtn.addEventListener("click", async () => {
+              const ok = confirm("Bu yazıyı gerçekten silmek istiyor musun? Bu işlem geri alınamaz.");
+              if (!ok) return;
+              try {
+                await deleteDoc(doc(db, "yazilar", id));
+                alert("Yazı silindi.");
+                await yazilariGetir(user);
+              } catch (err) {
+                alert("Silme sırasında hata: " + (err.message || err));
+              }
+            });
+            article.appendChild(delBtn);
+          }
+
+          yaziListesi.appendChild(article);
+        });
+      } catch (err) {
+        yaziListesi.innerHTML = "<p>Yazılar yüklenirken hata oldu.</p>";
+        console.error(err);
+      }
     }
 
-    yazilariGetir();
+    // ---------- Auth durumunu izle ----------
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        adminStatus.textContent = "Giriş: " + (user.email || "admin");
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        // girişli kullanıcı bilgilerini gizle (isteğe bağlı)
+        adminEmailInput.style.display = "none";
+        adminPasswordInput.style.display = "none";
+        yazilariGetir(user);
+      } else {
+        adminStatus.textContent = "Ziyaretçi";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        adminEmailInput.style.display = "inline-block";
+        adminPasswordInput.style.display = "inline-block";
+        yazilariGetir(null);
+      }
+    });
+
+    // İlk yüklemede yazıları getir (anon)
+    yazilariGetir(null);
   </script>
 </body>
 </html>
