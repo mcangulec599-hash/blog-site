@@ -10,25 +10,51 @@
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: black;
+            background-color: black; /* Arka plan rengi */
             display: flex;
+            flex-direction: column; /* Öğeleri alt alta dizer */
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            font-family: Arial, sans-serif; /* Yazı tipi */
         }
+
+        /* Video Ayarları */
         video {
-            max-width: 100%;
-            max-height: 100vh;
-            object-fit: contain;
+            width: 90%;       /* Telefo ekranının %90'ını kaplasın */
+            max-width: 800px; /* Bilgisayarda çok devasa olmasın */
+            height: auto;
+            border-radius: 10px; /* Köşeleri hafif yuvarlatır, şık durur */
+            box-shadow: 0 0 20px rgba(255,255,255,0.1); /* Hafif beyaz parlama */
+        }
+
+        /* Üst Yazı Stili */
+        h1 {
+            color: white;
+            margin-bottom: 20px; /* Video ile arasındaki boşluk */
+            text-align: center;
+            font-size: 24px;
+        }
+
+        /* Alt Yazı Stili */
+        p {
+            color: #cccccc; /* Hafif gri renk */
+            margin-top: 15px; /* Video ile arasındaki boşluk */
+            text-align: center;
+            font-size: 16px;
+            max-width: 90%;
         }
     </style>
 </head>
 <body>
 
+    <h1>ALLAH</h1>
+
     <video controls playsinline autoplay>
         <source src="gemini_generated_video_5E54E520.mov" type="video/mp4">
         Tarayıcınız bu videoyu desteklemiyor.
     </video>
+
+    <p>RAB.BİLAL(c.c)</p>
 
 </body>
 </html>
